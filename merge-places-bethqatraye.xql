@@ -515,21 +515,21 @@ let $titleStmt :=
     $editors,
     $respStmts}
 
-let $idnos := 
+let $idnos :=  (:need to tak a closer look at what this section does; not sure how to adapt for BQ :)
     (if ($master-uri=$secondary-uri) then
-        $master-place/idno[@type='URI' and matches(.,'http://syriaca.org')] (:adapt the matching URI here to allow BQ? Or statement?  :)
+        $master-place/idno[@type='URI' and matches(.,'http://syriaca.org')] (:adapt the matching URI here to allow BQ? 'or' statement?  :)
     else
-        (syriaca:update-attribute($master-person/idno[@type='URI' and matches(.,'http://syriaca.org')],'change',concat('#',$change-new-id)),
+        (syriaca:update-attribute($master-place/idno[@type='URI' and matches(.,'http://syriaca.org')],'change',concat('#',$change-new-id)),
         syriaca:update-attribute(
-            syriaca:update-attribute($secondary-person/idno[@type='URI' and matches(.,'http://syriaca.org')],'change',concat('#',$change-new-id)),
+            syriaca:update-attribute($secondary-place/idno[@type='URI' and matches(.,'http://syriaca.org')],'change',concat('#',$change-new-id)),
             'type',
             'deprecated'
-    )),
-    syriaca:merge-nodes($master-person/idno[not(matches(.,'http://syriaca.org'))], 
-        $secondary-person/idno[not(matches(.,'http://syriaca.org'))], 
+    )),(:the below then seems to merge non-Syriaca URIs. Will need to adapt functionality to deal with BQ?:)
+    syriaca:merge-nodes($master-place/idno[not(matches(.,'http://syriaca.org'))], 
+        $secondary-place/idno[not(matches(.,'http://syriaca.org'))], 
         $test-deep-equal-no-ids-or-sources, 
         (), 
-        $secondary-person/bibl, 
+        $secondary-place/bibl, 
         $bibls))
 
 let $publication-stmt-master := $master-record//publicationStmt
@@ -577,76 +577,42 @@ let $header :=
 (:let $abstract := syriaca:preserve-master($master-person/note[@type='abstract'], $secondary-person/note[@type='abstract'], $secondary-person/bibl, $bibls):)
 
 
-let $abstract := $master-person/note[@type='abstract']
-let $desc-hagio-secondary := $secondary-person/note[@type='abstract']
-let $desc-hagio-updated := if ($desc-hagio-secondary) then element note {$desc-hagio-secondary/@*, 'In hagiography: ', $desc-hagio-secondary/node()} else ()
-let $desc-hagio := 
+let $abstract := $master-place/desc[@type='abstract']
+let $desc-secondary := $secondary-place/desc[@type='abstract']
+let $desc-updated := if ($desc-secondary) then element desc {$desc-secondary/@*, 'In hagiography: ', $desc-secondary/node()} else () (:fix this further:)
+let $desc := 
     syriaca:update-attribute(
         syriaca:update-sources(
-            syriaca:remove-extra-attributes($desc-hagio-updated, 'xml:id'), 
-            $secondary-person/bibl, 
+            syriaca:remove-extra-attributes($desc-updated, 'xml:id'), 
+            $secondary-place/bibl, 
             $bibls),
         'type',
-        'description')
-let $sex := syriaca:preserve-master($master-person/sex[1], $secondary-person/sex[1], $secondary-person/bibl, $bibls)
-let $floruit := syriaca:combine-dates(
-    syriaca:merge-nodes(
-        $master-person/floruit, 
-        $secondary-person/floruit, 
-        $test-deep-equal-no-ids-or-sources, 
-        (),$secondary-person/bibl, $bibls))
-let $birth := syriaca:combine-dates(
-    syriaca:merge-nodes(
-        $master-person/birth, 
-        $secondary-person/birth, 
-        $test-deep-equal-no-ids-or-sources, 
-        (),$secondary-person/bibl, $bibls))
-let $death := syriaca:combine-dates(
-    syriaca:merge-nodes(
-        $master-person/death, 
-        $secondary-person/death, 
-        $test-deep-equal-no-ids-or-sources, 
-        (), 
-        $secondary-person/bibl, 
-        $bibls))
+        'description') (:need to adapt to allow the multiple descriptions. Or turn non-abstract descriptions into attestations:)
 
-let $notes := syriaca:merge-nodes($master-person/note[not(@type='abstract')], 
-    $secondary-person/note[not(@type='abstract')], 
+(:LOCATION MERGE:)
+let $events := syriaca:merge-nodes($master-place/event, 
+    $secondary-place/event,
     $test-deep-equal-no-ids-or-sources, 
     (), 
-    $secondary-person/bibl, 
-    $bibls)
-    
-let $states := syriaca:merge-nodes($master-person/state, 
-    $secondary-person/state, 
-    $test-deep-equal-no-ids-or-sources, 
-    (), 
-    $secondary-person/bibl, 
-    $bibls)
-    
-let $traits := syriaca:merge-nodes($master-person/trait, 
-    $secondary-person/trait, 
-    $test-deep-equal-no-ids-or-sources, 
-    (), 
-    $secondary-person/bibl, 
+    $secondary-place/bibl, 
     $bibls)
 
-let $events := syriaca:merge-nodes($master-person/event, 
-    $secondary-person/event,
+let $notes := syriaca:merge-nodes($master-place/note, 
+    $secondary-place/note, 
     $test-deep-equal-no-ids-or-sources, 
     (), 
-    $secondary-person/bibl, 
+    $secondary-place/bibl, 
     $bibls)
     
-let $links := syriaca:merge-nodes($master-person/link, 
-    $secondary-person/link, 
+let $states := syriaca:merge-nodes($master-place/state, 
+    $secondary-place/state, 
     $test-deep-equal-no-ids-or-sources, 
     (), 
-    $secondary-person/bibl, 
+    $secondary-place/bibl, 
     $bibls)
     
-let $relations-secondary := syriaca:update-relation-attributes($secondary-person/../listRelation/relation, $master-id, $secondary-id)
-let $relations-master := syriaca:update-relation-attributes($master-person/../listRelation/relation, $master-id, $secondary-id)
+let $relations-secondary := syriaca:update-relation-attributes($secondary-place/../listRelation/relation, $master-id, $secondary-id) (:place/78 doesn't have the listRelation element; check manual for its use:)
+let $relations-master := syriaca:update-relation-attributes($master-place/../listRelation/relation, $master-id, $secondary-id)
     
 let $relations := 
     if ($relations-master or $relations-secondary) then
@@ -655,32 +621,27 @@ let $relations :=
                 $relations-secondary, 
                 $test-deep-equal-no-ids-or-sources, 
                 (), 
-                $secondary-person/bibl, 
+                $secondary-place/bibl, 
                 $bibls)
         }
     else ()
     
-let $person := <person>
-    {$master-person/@*}
-    {($persNames,
-    $idnos,
+let $place := <place>
+    {$master-place/@*}
+    {($placeNames,
     $abstract,
-(:    adapted for authors-saints merge :)
-    $desc-hagio,
-    $sex,
-    $floruit,
-    $birth,
-    $death,
+    (:need $descs:)
+    (:need $locations:)
+    $events,    
+    $states,    
     $notes,
-    $states,
-    $traits,
-    $events,
-    $links,
+    $idnos,
+    (:check if we need $links, which was in the original at this point; not sure how they were generated. not in place/78:)
     $bibls)}
-    </person>
+    </place>
     
-(: Having trouble finding the right formula for matching events, etc. across records :)
-(: Also need to get headword selection working :)
+(: Having trouble finding the right formula for matching events, etc. across records(from NGibson) :)
+(: Also need to get headword selection working (from NGibson):)
 return 
     <TEI xml:lang='en'>
         {$header}
@@ -693,11 +654,6 @@ return
             </body>
         </text>
     </TEI>
-(:    (syriaca:write-new-header($header, $header-master),:)
-(:    syriaca:write-new-person($person, $master-person),:)
-(:    syriaca:write-new-relations($relations, $relations-master, $master-person),:)
-(:    syriaca:deprecate-merge-redirect($secondary-record, $master-uri, $user),:)
-(:    syriaca:update-person-work-links($master-uri, $secondary-uri, $places-master-collection, $works)):)
 };
 
 
