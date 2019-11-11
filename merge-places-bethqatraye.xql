@@ -138,6 +138,7 @@ as node()*
                 else element {name($node)} {$node/@*,syriaca:update-sources($node/node(), $old-bibls, $new-bibls)}
             else $node
 };
+(: Make this function more general by passing in a 'master-base-uri' and a 'secondary-base-uri' based on the data source :)
 declare function syriaca:update-relation-attributes($input-nodes as node()*,$master-id,$secondary-id)
 as node()*
 {
@@ -263,12 +264,12 @@ declare function syriaca:combine-dates($dates as node()*)  as node()? {
 
 
 (: RECORD REWRITING FUNCTIONS :)
-declare function syriaca:deprecate-merge-redirect($tei-root as node(),$redirect-uri as xs:string,$user as xs:string)
+declare function syriaca:deprecate-merge-redirect($tei-root as node(),$redirect-uri as xs:string, $base-uri as xs:string, $user as xs:string)
 
 {
     let $secondary-uri := 
         replace($tei-root/teiHeader/fileDesc/publicationStmt/idno[@type='URI'][1], '/tei','')
-    let $secondary-id := replace($secondary-uri,'http://syriaca.org/place/','')
+    let $secondary-id := replace($secondary-uri,$base-uri,'')
     let $changes-old := $tei-root/teiHeader/revisionDesc/change
     let $change-id := syriaca:next-id($changes-old/@xml:id, concat('change',$secondary-id,'-'), 1)
     let $change-attribute := attribute change {concat('#',$change-id)}
@@ -369,13 +370,13 @@ declare function syriaca:update-person-work-links ($master-uri as xs:string, $se
 };
 
 (: MAIN MERGE SCRIPT :)
-declare function syriaca:merge-records ($user as xs:string, $master-uri as xs:string, $secondary-uri as xs:string, $places-master-collection as node()*, $places-secondary-collection as node()*)
+declare function syriaca:merge-records ($user as xs:string, $master-uri as xs:string, $master-base-uri as xs:string, $secondary-uri as xs:string, $secondary-base-uri as xs:string, $places-master-collection as node()*, $places-secondary-collection as node()*)
 {
  
-let $master-id := replace($master-uri,'http://syriaca.org/person/','') (:make the second parameter here more generic:)
+let $master-id := replace($master-uri,$master-base-uri,'')
 let $master-record := $places-master-collection[text/body/listPlace/place/idno[@type='URI']=$master-uri]
 
-let $secondary-id := replace($secondary-uri,'http://syriaca.org/person/','') (:make the second parameter here more generic:)
+let $secondary-id := replace($secondary-uri,$secondary-base-uri,'')
 let $secondary-record := $places-secondary-collection[text/body/listPlace/place/idno[@type='URI']=$secondary-uri] 
 
 let $titles-master := $master-record/teiHeader/fileDesc/titleStmt/title
@@ -418,73 +419,6 @@ let $test-deep-equal := './idno[@type="URI"]=$node/idno[@type="URI"]'
 
 let $seriesStmts-master := $master-record/teiHeader/fileDesc/seriesStmt
 let $seriesStmts-secondary := $secondary-record/teiHeader/fileDesc/seriesStmt
-(:
-let $includes-saint := matches(($seriesStmts-master|$seriesStmts-secondary)/descendant-or-self::*,'http://syriaca.org/q')
-let $includes-author := matches(($seriesStmts-master|$seriesStmts-secondary)/descendant-or-self::*,'http://syriaca.org/authors')
-
-let $biblScope-saint := 
-    if ($includes-saint) then 
-        <biblScope unit="vol" from="1" to="1">
-            <title level="m">Qadishe: A Guide to the Syriac Saints</title>
-            <idno type="URI">http://syriaca.org/q</idno>
-        </biblScope>
-    else ()
-let $biblScope-author := 
-    if ($includes-author) then
-        <biblScope unit="vol" from="2" to="2">
-            <title level="m">A Guide to Syriac Authors</title>
-            <idno type="URI">http://syriaca.org/authors</idno>
-        </biblScope>
-    else ()
-:) (: NEED TO ADAPT THE ABOVE FOR ANY REASON? :)
-(:let $seriesStmts :=
-    (<seriesStmt>
-        <title level="s">The Syriac Biographical Dictionary</title>
-        <editor role="general" ref="http://syriaca.org/documentation/editors.xml#dmichelson">David A. Michelson</editor>
-        <editor role="associate" ref="http://syriaca.org/documentation/editors.xml#jnsaint-laurent">Jeanne-Nicole Mellon Saint-Laurent</editor>
-        <editor role="associate" ref="http://syriaca.org/documentation/editors.xml#ngibson">Nathan P. Gibson</editor>
-        <editor role="associate" ref="http://syriaca.org/documentation/editors.xml#dschwartz">Daniel L. Schwartz</editor>
-        <respStmt>
-            <resp>Edited by</resp>
-            <name type="person" ref="http://syriaca.org/documentation/editors.xml#dmichelson">David A. Michelson</name>
-        </respStmt>
-        <respStmt>
-            <resp>Edited by</resp>
-            <name type="person" ref="http://syriaca.org/documentation/editors.xml#jnsaint-laurent">Jeanne-Nicole Mellon Saint-Laurent</name>
-        </respStmt>
-        <respStmt>
-            <resp>Edited by</resp>
-            <name type="person" ref="http://syriaca.org/documentation/editors.xml#ngibson">Nathan P.  Gibson</name>
-        </respStmt>
-        <respStmt>
-            <resp>Edited by</resp>
-            <name type="person" ref="http://syriaca.org/documentation/editors.xml#dschwartz">Daniel L. Schwartz</name>
-        </respStmt>
-        <idno type="URI">http://syriaca.org/persons</idno>
-        {$biblScope-saint, $biblScope-author}
-    </seriesStmt>,
-    if ($includes-saint) then 
-    <seriesStmt>
-        <title level="s">Gateway to the Syriac Saints</title>
-        <editor role="general" ref="http://syriaca.org/documentation/editors.xml#jnsaint-laurent">Jeanne-Nicole Mellon Saint-Laurent</editor>
-        <editor role="general" ref="http://syriaca.org/documentation/editors.xml#dmichelson">David A.
-                Michelson</editor>
-        <respStmt>
-            <resp>Edited by</resp>
-            <name type="person" ref="http://syriaca.org/documentation/editors.xml#jnsaint-laurent">Jeanne-Nicole Mellon Saint-Laurent</name>
-        </respStmt>
-        <respStmt>
-            <resp>Edited by</resp>
-            <name type="person" ref="http://syriaca.org/documentation/editors.xml#dmichelson">David A.
-                    Michelson</name>
-        </respStmt>
-        <idno type="URI">http://syriaca.org/saints</idno>
-        <biblScope unit="vol" from="1" to="1">
-            <title level="m">Qadishe: A Guide to the Syriac Saints</title>
-            <idno type="URI">http://syriaca.org/q</idno>
-        </biblScope>
-    </seriesStmt>
-    else ()):) (: NEED TO ADAPT THE ABOVE FOR ANY REASON? :)
 
 let $placeNames := 
     syriaca:merge-nodes($master-place/placeName, 
@@ -515,18 +449,18 @@ let $titleStmt :=
     $editors,
     $respStmts}
 
-let $idnos :=  (:need to tak a closer look at what this section does; not sure how to adapt for BQ :)
+let $idnos :=
     (if ($master-uri=$secondary-uri) then
-        $master-place/idno[@type='URI' and matches(.,'http://syriaca.org')] (:adapt the matching URI here to allow BQ? 'or' statement?  :)
+        $master-place/idno[@type='URI' and matches(.,$master-base-uri)]
     else
-        (syriaca:update-attribute($master-place/idno[@type='URI' and matches(.,'http://syriaca.org')],'change',concat('#',$change-new-id)),
+        (syriaca:update-attribute($master-place/idno[@type='URI' and matches(.,$master-base-uri)],'change',concat('#',$change-new-id)),
         syriaca:update-attribute(
-            syriaca:update-attribute($secondary-place/idno[@type='URI' and matches(.,'http://syriaca.org')],'change',concat('#',$change-new-id)),
+            syriaca:update-attribute($secondary-place/idno[@type='URI' and matches(.,$secondary-base-uri)],'change',concat('#',$change-new-id)),
             'type',
             'deprecated'
-    )),(:the below then seems to merge non-Syriaca URIs. Will need to adapt functionality to deal with BQ?:)
-    syriaca:merge-nodes($master-place/idno[not(matches(.,'http://syriaca.org'))], 
-        $secondary-place/idno[not(matches(.,'http://syriaca.org'))], 
+    )),
+    syriaca:merge-nodes($master-place/idno[not(matches(.,$master-base-uri))], 
+        $secondary-place/idno[not(matches(.,$secondary-base-uri))], 
         $test-deep-equal-no-ids-or-sources, 
         (), 
         $secondary-place/bibl, 
@@ -548,7 +482,7 @@ let $publication-idnos :=
             'type',
             'deprecated'
         ))
-
+(: POTENTIAL EDIT: SYRIACA PLACES HAVE A LIST OF COPYRIGHTED SOURCES WITH BIBL POINTERS. MAY NEED TO FIGURE OUT HOW TO MERGE...:)
 let $publication-stmt := 
     <publicationStmt>
         {$publication-stmt-master/authority,
@@ -578,7 +512,7 @@ let $header :=
 
 let $abstract := $master-place/desc[@type='abstract']
 let $desc-secondary := $secondary-place/desc[@type='abstract']
-let $desc-updated := if ($desc-secondary) then element desc {$desc-secondary/@*, 'In hagiography: ', $desc-secondary/node()} else () (:fix this further:)
+let $desc-updated := if ($desc-secondary) then element desc {$desc-secondary/@*, 'In hagiography: ', $desc-secondary/node()} else ()
 let $desc := 
     syriaca:update-attribute(
         syriaca:update-sources(
@@ -588,7 +522,13 @@ let $desc :=
         'type',
         'description') (:need to adapt to allow the multiple descriptions. Or turn non-abstract descriptions into attestations:)
 
-(:LOCATION MERGE:)
+let $locations := syriaca:merge-nodes($master-place/location, 
+    $secondary-place/location,
+    $test-deep-equal-no-ids-or-sources, 
+    (), 
+    $secondary-place/bibl, 
+    $bibls)
+    
 let $events := syriaca:merge-nodes($master-place/event, 
     $secondary-place/event,
     $test-deep-equal-no-ids-or-sources, 
@@ -609,8 +549,8 @@ let $states := syriaca:merge-nodes($master-place/state,
     (), 
     $secondary-place/bibl, 
     $bibls)
-    
-let $relations-secondary := syriaca:update-relation-attributes($secondary-place/../listRelation/relation, $master-id, $secondary-id) (:place/78 doesn't have the listRelation element; check manual for its use:)
+    (: Will need to update the below functions :)
+let $relations-secondary := syriaca:update-relation-attributes($secondary-place/../listRelation/relation, $master-id, $secondary-id) 
 let $relations-master := syriaca:update-relation-attributes($master-place/../listRelation/relation, $master-id, $secondary-id)
     
 let $relations := 
@@ -630,7 +570,7 @@ let $place := <place>
     {($placeNames,
     $abstract,
     (:need $descs:)
-    (:need $locations:)
+    $locations,
     $events,    
     $states,    
     $notes,
@@ -666,6 +606,8 @@ return
 
 (: Your user id in http://syriaca.org/documentation/editors.xml :)
 let $user := 'wpotter'
+let $master-base-uri := "http://bqgazetteer.bethmardutho.org/place/"
+let $secondary-base-uri := "http://bqgazetteer.bethmardutho.org/place/"
 
 (:Leave the following variables blank. Uncomment the ones in the MERGE FOLDER section if you want to merge an entire folder.:)
 let $records-to-merge := ''
@@ -679,7 +621,7 @@ let $secondary-uri-merge-folder := ''
 (:let $records-to-merge := collection('/db/apps/srophe-data/data/persons/ektobe-matched-2017-06-26/')/TEI
     for $record-to-merge in $records-to-merge 
         let $master-uri-merge-folder := $record-to-merge/text/body/listPerson/person/idno[@type='URI' and matches(.,'http://syriaca\.org')]/text()
-        let $secondary-uri-merge-folder := $master-uri-merge-folder:)
+        let $secondary-uri-merge-folder := $master-uri-merge-folder :)
     (: END MERGE FOLDER :)
     (: ------------------------------------------------------------------------ :)
     
@@ -687,26 +629,26 @@ let $secondary-uri-merge-folder := ''
     
     (: Record that will be kept :)
     (: Change as needed; or use the above folder:)
-        let $master-uri-merge-manual := 'http://syriaca.org/place/10'
+        let $master-uri-merge-manual := 'http://bqgazetteer.bethmardutho.org/place/5285'
         (: Record that will be deprecated :)
-        let $secondary-uri-merge-manual := 'http://syriaca.org/place/100'
+        let $secondary-uri-merge-manual := 'http://bqgazetteer.bethmardutho.org/place/5284'
         
     let $master-uri := if ($master-uri-merge-folder) then $master-uri-merge-folder else $master-uri-merge-manual
     let $secondary-uri := if ($secondary-uri-merge-folder) then $secondary-uri-merge-folder else $secondary-uri-merge-manual
     
-    let $places-master-collection := collection('/db/apps/srophe-data/data/places/tei/')/TEI (:change to places:)
+    let $places-master-collection := collection('/db/apps/bethqatraye-data/data/places/tei/')/TEI (:change to places:)
     let $places-secondary-collection := if ($records-to-merge) then $records-to-merge else $places-master-collection
     let $works := collection('/db/apps/srophe-data/data/works/tei/')/TEI
     
     let $master-record := $places-master-collection[text/body/listPlace/place[idno=$master-uri]]
     let $master-collection := util:collection-name($master-record)
     let $master-filename := util:document-name($master-record)
-    let $master-record-content := syriaca:merge-records($user, $master-uri, $secondary-uri, $places-master-collection, $places-secondary-collection)
+    let $master-record-content := syriaca:merge-records($user, $master-uri, $master-base-uri, $secondary-uri, $secondary-base-uri,$places-master-collection, $places-secondary-collection)
     
     let $secondary-record := $places-secondary-collection[text/body/listPlace/place[idno=$secondary-uri]]
     let $secondary-collection := util:collection-name($secondary-record)
     let $secondary-filename := util:document-name($secondary-record)
-    let $secondary-record-content := syriaca:deprecate-merge-redirect($secondary-record, $master-uri, $user)
+    let $secondary-record-content := syriaca:deprecate-merge-redirect($secondary-record, $master-uri, $secondary-base-uri, $user)
     
     return 
         (xmldb:store($master-collection,$master-filename,$master-record-content),
@@ -715,4 +657,3 @@ let $secondary-uri-merge-folder := ''
             syriaca:update-person-work-links($master-uri, $secondary-uri, $places-master-collection, $works) (:check if need; if need to change:)
             else ()
         )
-        
