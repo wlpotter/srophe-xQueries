@@ -268,7 +268,7 @@ declare function syriaca:deprecate-merge-redirect($tei-root as node(),$redirect-
 {
     let $secondary-uri := 
         replace($tei-root/teiHeader/fileDesc/publicationStmt/idno[@type='URI'][1], '/tei','')
-    let $secondary-id := replace($secondary-uri,'http://syriaca.org/person/','')
+    let $secondary-id := replace($secondary-uri,'http://syriaca.org/place/','')
     let $changes-old := $tei-root/teiHeader/revisionDesc/change
     let $change-id := syriaca:next-id($changes-old/@xml:id, concat('change',$secondary-id,'-'), 1)
     let $change-attribute := attribute change {concat('#',$change-id)}
@@ -298,7 +298,7 @@ declare function syriaca:deprecate-merge-redirect($tei-root as node(),$redirect-
                 attribute type {'deprecation'},
                 concat('This record has been deprecated and merged into ',$redirect-uri,'.')}
     let $body := element body {$body-old/@*,$body-text,$body-old/node()}
-    let $idno-old := $tei-root/text/body/listPerson/person/idno[@type='URI' and text()=$secondary-uri]
+    let $idno-old := $tei-root/text/body/listPlace/place/idno[@type='URI' and text()=$secondary-uri]
     let $idno := 
         (element idno {$idno-old/@*,$change-attribute,$idno-old/node()},
         element idno {attribute type {'redirect'},$change-attribute,$redirect-uri})
@@ -319,15 +319,15 @@ declare function syriaca:deprecate-merge-redirect($tei-root as node(),$redirect-
             <text>
                 <body>
                     {$body-text}
-                    <listPerson>
-                        <person>
-                            {$tei-root/text/body/listPerson/person/@*}
-                            {$tei-root/text/body/listPerson/person/(persName|note)}
+                    <listPlace>
+                        <place>
+                            {$tei-root/text/body/listPlace/place/@*}
+                            {$tei-root/text/body/listPlace/place/(placeName|note)}
                             {$idno}
-                            {$tei-root/text/body/listPerson/person/idno[not(@type='URI' and text()=$secondary-uri)]}
-                            {$tei-root/text/body/listPerson/person/node()[not(name()=('persName','note','idno'))]}
-                        </person>
-                    </listPerson>
+                            {$tei-root/text/body/listPlace/place/idno[not(@type='URI' and text()=$secondary-uri)]}
+                            {$tei-root/text/body/listPlace/place/node()[not(name()=('placeName','note','idno'))]}
+                        </place>
+                    </listPlace>
                 </body>
             </text>
         </TEI>
@@ -564,7 +564,6 @@ let $header :=
             {$titleStmt}
             {($master-record/teiHeader/fileDesc/editionStmt,
             $publication-stmt,
-            $seriesStmts,
             $master-record/teiHeader/fileDesc/sourceDesc)}
         </fileDesc>
         {($master-record/teiHeader/encodingDesc,
@@ -647,10 +646,10 @@ return
         {$header}
         <text>
             <body>
-                <listPerson>
-                    {$person}
+                <listPlace>
+                    {$place}
                     {$relations}
-                </listPerson>
+                </listPlace>
             </body>
         </text>
     </TEI>
@@ -688,9 +687,9 @@ let $secondary-uri-merge-folder := ''
     
     (: Record that will be kept :)
     (: Change as needed; or use the above folder:)
-        let $master-uri-merge-manual := 'http://syriaca.org/person/1463'
+        let $master-uri-merge-manual := 'http://syriaca.org/place/10'
         (: Record that will be deprecated :)
-        let $secondary-uri-merge-manual := 'http://syriaca.org/person/2072'
+        let $secondary-uri-merge-manual := 'http://syriaca.org/place/100'
         
     let $master-uri := if ($master-uri-merge-folder) then $master-uri-merge-folder else $master-uri-merge-manual
     let $secondary-uri := if ($secondary-uri-merge-folder) then $secondary-uri-merge-folder else $secondary-uri-merge-manual
