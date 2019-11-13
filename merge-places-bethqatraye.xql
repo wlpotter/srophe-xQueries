@@ -138,14 +138,14 @@ as node()*
                 else element {name($node)} {$node/@*,syriaca:update-sources($node/node(), $old-bibls, $new-bibls)}
             else $node
 };
-(: Make this function more general by passing in a 'master-base-uri' and a 'secondary-base-uri' based on the data source :)
-declare function syriaca:update-relation-attributes($input-nodes as node()*,$master-id,$secondary-id)
+
+declare function syriaca:update-relation-attributes($input-nodes as node()*,$master-id,$secondary-id, $master-base-uri as xs:string, $secondary-base-uri as xs:string)
 as node()*
 {
-    let $master-uri := concat('http://syriaca.org/person/',$master-id)
-    let $master-person-id := concat('#person-',$master-id)
-    let $secondary-uri := concat('http://syriaca.org/person/',$secondary-id)
-    let $secondary-person-id := concat('#person-',$secondary-id)
+    let $master-uri := concat($master-base-uri,$master-id)
+    let $master-place-id := concat('#place-',$master-id)
+    let $secondary-uri := concat($secondary-base-uri,$secondary-id)
+    let $secondary-person-id := concat('#place-',$secondary-id)
     for $node in $input-nodes
         let $new-attributes := 
             for $attribute in $node/(@mutual|@active|@passive)
@@ -153,12 +153,12 @@ as node()*
                     replace
                         (replace
                             (replace
-                                (replace($attribute,$master-person-id,$master-uri),
-                                $secondary-person-id,
+                                (replace($attribute,$master-place-id,$master-uri),
+                                $secondary-place-id,
                                 $master-uri),
                             $secondary-uri,
                             $master-uri), 
-                            '#person\-',
+                            '#place\-',
                             '')
                 return attribute {name($attribute)} {$attribute-value}
         return element {name($node)} {$node/@*[not(name()=('mutual','active','passive'))],$new-attributes,$node/node()}
@@ -509,6 +509,7 @@ let $header :=
 
 (:let $abstract := syriaca:preserve-master($master-person/note[@type='abstract'], $secondary-person/note[@type='abstract'], $secondary-person/bibl, $bibls):)
 
+(: NEED TO: Preserve the master's abstract (unless it doesn't have one); remove the @type="abstract" and @xml:id="abstract###-##" from the secondary record but include it in the primary record as a general desc. If the strings are the same in the two, just keep the master. :)
 let $abstract-master := $master-place/desc[@type='abstract']
 let $abstract-secondary := $secondary-place/desc[@type='abstract']
 let $abstract-xml-id := concat("abstract", $master-id, "-1")
@@ -549,9 +550,9 @@ let $states := syriaca:merge-nodes($master-place/state,
     (), 
     $secondary-place/bibl, 
     $bibls)
-    (: Will need to update the below functions :)
-let $relations-secondary := syriaca:update-relation-attributes($secondary-place/../listRelation/relation, $master-id, $secondary-id) 
-let $relations-master := syriaca:update-relation-attributes($master-place/../listRelation/relation, $master-id, $secondary-id)
+    
+let $relations-secondary := syriaca:update-relation-attributes($secondary-place/../listRelation/relation, $master-id, $secondary-id, $master-base-uri, $secondary-base-uri) 
+let $relations-master := syriaca:update-relation-attributes($master-place/../listRelation/relation, $master-id, $secondary-id, $master-base-uri, $secondary-base-uri)
     
 let $relations := 
     if ($relations-master or $relations-secondary) then
@@ -617,12 +618,12 @@ let $secondary-uri-merge-folder := ''
 
     (: ------------------------------------------------------------------------ :)
     (: BEGIN MERGE FOLDER: If you want to merge an entire folder of records that have the URIs of existing records, 
- : set the $records-to-merge variable to the folder and uncomment the following lines. WILL NEED TO CHANGE TO ALLOW BQ URIs AND TO POINT TO PERSONS:)
+ : set the $records-to-merge variable to the folder and uncomment the following lines.:)
 
-(:  let $records-to-merge := collection('/db/apps/bethqatraye-data/data/places/tei/')/TEI
+    let $records-to-merge := collection('/db/apps/D1&amp;D2')/TEI
     for $record-to-merge in $records-to-merge 
         let $master-uri-merge-folder := $record-to-merge/text/body/listPlace/place/idno[@type='URI' and matches(.,$master-base-uri)]/text()
-        let $secondary-uri-merge-folder := $master-uri-merge-folder:)
+        let $secondary-uri-merge-folder := $master-uri-merge-folder
     (: END MERGE FOLDER :)
     (: ------------------------------------------------------------------------ :)
     
@@ -658,3 +659,6 @@ let $secondary-uri-merge-folder := ''
             syriaca:update-person-work-links($master-uri, $secondary-uri, $places-master-collection, $works) (:check if need; if need to change:)
             else ()
         )
+        
+
+
