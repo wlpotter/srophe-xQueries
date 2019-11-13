@@ -145,7 +145,7 @@ as node()*
     let $master-uri := concat($master-base-uri,$master-id)
     let $master-place-id := concat('#place-',$master-id)
     let $secondary-uri := concat($secondary-base-uri,$secondary-id)
-    let $secondary-person-id := concat('#place-',$secondary-id)
+    let $secondary-place-id := concat('#place-',$secondary-id)
     for $node in $input-nodes
         let $new-attributes := 
             for $attribute in $node/(@mutual|@active|@passive)
@@ -638,7 +638,7 @@ let $secondary-uri-merge-folder := ''
     let $master-uri := if ($master-uri-merge-folder) then $master-uri-merge-folder else $master-uri-merge-manual
     let $secondary-uri := if ($secondary-uri-merge-folder) then $secondary-uri-merge-folder else $secondary-uri-merge-manual
     
-    let $places-master-collection := collection('/db/apps/bethqatraye-data/data/places/tei/')/TEI
+    let $places-master-collection := collection('/db/apps/D1&amp;D2')/TEI
     let $places-secondary-collection := if ($records-to-merge) then $records-to-merge else $places-master-collection
     let $works := collection('/db/apps/srophe-data/data/works/tei/')/TEI
     
