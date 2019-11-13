@@ -509,19 +509,19 @@ let $header :=
 
 (:let $abstract := syriaca:preserve-master($master-person/note[@type='abstract'], $secondary-person/note[@type='abstract'], $secondary-person/bibl, $bibls):)
 
-
-let $abstract := $master-place/desc[@type='abstract']
-let $desc-secondary := $secondary-place/desc[@type='abstract']
-let $desc-updated := if ($desc-secondary) then element desc {$desc-secondary/@*, 'In hagiography: ', $desc-secondary/node()} else ()
-let $desc := 
-    syriaca:update-attribute(
-        syriaca:update-sources(
-            syriaca:remove-extra-attributes($desc-updated, 'xml:id'), 
-            $secondary-place/bibl, 
-            $bibls),
-        'type',
-        'description') (:need to adapt to allow the multiple descriptions. Or turn non-abstract descriptions into attestations:)
-
+let $abstract-master := $master-place/desc[@type='abstract']
+let $abstract-secondary := $secondary-place/desc[@type='abstract']
+let $abstract-xml-id := concat("abstract", $master-id, "-1")
+let $abstract := if($abstract-master) then $abstract-master else syriaca:update-attribute($abstract-secondary, "xml:id", $abstract-xml-id)
+let $desc-from-secondary-abstract := if($abstract-master/text() != $abstract-secondary/text()) then syriaca:remove-extra-attributes($abstract-secondary, ('xml:id','type')) else()
+(: Merge in the descriptions which are not the abstract :)
+let $descs := syriaca:merge-nodes($master-place/desc[not(@type)], 
+    $secondary-place/desc[not(@type)],
+    $test-deep-equal-no-ids-or-sources, 
+    (), 
+    $secondary-place/bibl, 
+    $bibls)
+    
 let $locations := syriaca:merge-nodes($master-place/location, 
     $secondary-place/location,
     $test-deep-equal-no-ids-or-sources, 
@@ -569,7 +569,8 @@ let $place := <place>
     {$master-place/@*}
     {($placeNames,
     $abstract,
-    (:need $descs:)
+    $desc-from-secondary-abstract,
+    $descs,
     $locations,
     $events,    
     $states,    
@@ -618,10 +619,10 @@ let $secondary-uri-merge-folder := ''
     (: BEGIN MERGE FOLDER: If you want to merge an entire folder of records that have the URIs of existing records, 
  : set the $records-to-merge variable to the folder and uncomment the following lines. WILL NEED TO CHANGE TO ALLOW BQ URIs AND TO POINT TO PERSONS:)
 
-(:let $records-to-merge := collection('/db/apps/srophe-data/data/persons/ektobe-matched-2017-06-26/')/TEI
+(:  let $records-to-merge := collection('/db/apps/bethqatraye-data/data/places/tei/')/TEI
     for $record-to-merge in $records-to-merge 
-        let $master-uri-merge-folder := $record-to-merge/text/body/listPerson/person/idno[@type='URI' and matches(.,'http://syriaca\.org')]/text()
-        let $secondary-uri-merge-folder := $master-uri-merge-folder :)
+        let $master-uri-merge-folder := $record-to-merge/text/body/listPlace/place/idno[@type='URI' and matches(.,$master-base-uri)]/text()
+        let $secondary-uri-merge-folder := $master-uri-merge-folder:)
     (: END MERGE FOLDER :)
     (: ------------------------------------------------------------------------ :)
     
@@ -629,14 +630,14 @@ let $secondary-uri-merge-folder := ''
     
     (: Record that will be kept :)
     (: Change as needed; or use the above folder:)
-        let $master-uri-merge-manual := 'http://bqgazetteer.bethmardutho.org/place/5285'
+        let $master-uri-merge-manual := 'http://bqgazetteer.bethmardutho.org/place/5307'
         (: Record that will be deprecated :)
-        let $secondary-uri-merge-manual := 'http://bqgazetteer.bethmardutho.org/place/5284'
+        let $secondary-uri-merge-manual := 'http://bqgazetteer.bethmardutho.org/place/5308'
         
     let $master-uri := if ($master-uri-merge-folder) then $master-uri-merge-folder else $master-uri-merge-manual
     let $secondary-uri := if ($secondary-uri-merge-folder) then $secondary-uri-merge-folder else $secondary-uri-merge-manual
     
-    let $places-master-collection := collection('/db/apps/bethqatraye-data/data/places/tei/')/TEI (:change to places:)
+    let $places-master-collection := collection('/db/apps/bethqatraye-data/data/places/tei/')/TEI
     let $places-secondary-collection := if ($records-to-merge) then $records-to-merge else $places-master-collection
     let $works := collection('/db/apps/srophe-data/data/works/tei/')/TEI
     
