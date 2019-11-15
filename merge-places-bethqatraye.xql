@@ -381,8 +381,7 @@ let $secondary-record := $places-secondary-collection[text/body/listPlace/place/
 
 let $titles-master := $master-record/teiHeader/fileDesc/titleStmt/title
 let $titles-secondary := $secondary-record/teiHeader/fileDesc/titleStmt/title
-let $titles := $titles-master[@level='a']
-
+let $titles := $titles-master
 let $respStmts-master := $master-record/teiHeader/fileDesc/titleStmt/respStmt
 let $respStmts-secondary := $secondary-record/teiHeader/fileDesc/titleStmt/respStmt
 let $respStmts := 
@@ -426,8 +425,7 @@ let $placeNames :=
         'string-join(descendant-or-self::*)=tokenize(string-join($node,","),",")', 
         (), 
         $secondary-place/bibl, 
-        $bibls)
-        
+        $bibls)    
 let $test-deep-equal-no-ids-or-sources := 'functx:is-node-in-sequence-deep-equal(syriaca:remove-extra-attributes(., ("xml:id","source")), syriaca:remove-extra-attributes($node, ("xml:id","source")))'
 
 (:THIS IS A KEY ISSUE FOR SYRIACA <-> BQ: HOW ARE WE HANDLING THE VARIED EDITORIAL STATEMENTS CONTAINED THEREIN?:)
@@ -620,7 +618,7 @@ let $secondary-uri-merge-folder := ''
     (: BEGIN MERGE FOLDER: If you want to merge an entire folder of records that have the URIs of existing records, 
  : set the $records-to-merge variable to the folder and uncomment the following lines.:)
 
-    let $records-to-merge := collection('/db/apps/D1&amp;D2')/TEI
+    let $records-to-merge := collection('/db/apps/EntriesToMerge/D2')/TEI
     for $record-to-merge in $records-to-merge 
         let $master-uri-merge-folder := $record-to-merge/text/body/listPlace/place/idno[@type='URI' and matches(.,$master-base-uri)]/text()
         let $secondary-uri-merge-folder := $master-uri-merge-folder
@@ -631,14 +629,14 @@ let $secondary-uri-merge-folder := ''
     
     (: Record that will be kept :)
     (: Change as needed; or use the above folder:)
-        let $master-uri-merge-manual := 'http://bqgazetteer.bethmardutho.org/place/5307'
+        let $master-uri-merge-manual := 'http://bqgazetteer.bethmardutho.org/place/5555'
         (: Record that will be deprecated :)
-        let $secondary-uri-merge-manual := 'http://bqgazetteer.bethmardutho.org/place/5308'
+        let $secondary-uri-merge-manual := 'http://bqgazetteer.bethmardutho.org/place/5556'
         
     let $master-uri := if ($master-uri-merge-folder) then $master-uri-merge-folder else $master-uri-merge-manual
     let $secondary-uri := if ($secondary-uri-merge-folder) then $secondary-uri-merge-folder else $secondary-uri-merge-manual
     
-    let $places-master-collection := collection('/db/apps/D1&amp;D2')/TEI
+    let $places-master-collection := collection('/db/apps/EntriesToMerge/D1')/TEI
     let $places-secondary-collection := if ($records-to-merge) then $records-to-merge else $places-master-collection
     let $works := collection('/db/apps/srophe-data/data/works/tei/')/TEI
     
@@ -659,6 +657,3 @@ let $secondary-uri-merge-folder := ''
             syriaca:update-person-work-links($master-uri, $secondary-uri, $places-master-collection, $works) (:check if need; if need to change:)
             else ()
         )
-        
-
-
